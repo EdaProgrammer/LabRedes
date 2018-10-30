@@ -3,7 +3,7 @@
 # Gustavo da Silva Eda 620114
 # Renan
 
-class Package:
+class Packet:
 
     def __init__(self, source, dest, cust):
         self.source = source
