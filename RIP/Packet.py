@@ -5,7 +5,7 @@
 
 class Packet:
 
-    def __init__(self, source, dest, cust):
+    def __init__(self, source, dest, paths):
         self.source = source
         self.dest = dest
-        self.cust = cust
+        self.paths = paths

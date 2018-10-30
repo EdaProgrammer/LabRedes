@@ -6,5 +6,5 @@
 class RIPTableElement:
 
     def __init__(self, cost, antecessor):
-        self.cost = cpst
+        self.cost = cost
         self.antecessor = antecessor

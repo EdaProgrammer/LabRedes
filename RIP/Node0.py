@@ -1,7 +1,7 @@
 # ----------- R I P -------------- #
 
-# Gustavo da Silva Eda 620114
-# Renan
+# Gustavo da Silva Eda          620114
+# Renan Rossignatti de França   489697
 
 from random import *
 import socket
@@ -13,50 +13,91 @@ import time
 import Packet
 import RIPTableElement
 
-class Node0:
+class Node:
 
-    def __init__(self, id):
-        self.id = id
-        self.table = []
+    def __init__(self):
+        self.id = 0
+        self.neighbours = [1, 2, 3]
+        self.paths = [] # RIPTableElements
 
     # guardar antecessor
-    def rinit0(self):
-        self.table.append(RIPTableElement(0, 0))
-        self.table.append(RIPTableElement(1, 0))
-        self.table.append(RIPTableElement(3, 0))
-        self.table.append(RIPTableElement(7, 0))
+    def rinit(self):
+        self.paths.append(RIPTableElement(0, self.id))
+        self.paths.append(RIPTableElement(1, self.id))
+        self.paths.append(RIPTableElement(3, self.id))
+        self.paths.append(RIPTableElement(7, self.id))
 
-        for i in range(1, 4):
-            p = Packet(0, i, self.table)
+        print 'enviando custos para os vizinhos...'
+        for i in self.neighbours:
+            p = Packet(self.id, i, self.paths)
             self.tolayer2(p)
 
     def tolayer2(self, packet):
-        print 'enviando custos para os vizinhos...'
         # abre socket
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect(localhost, 3000 + packet.dest)
         s.send(pickle.dumps(packet))
 
-    def rupdate0(self, packet):
+    def rtupdate(self, packet):
+        flag_update = False
+
         print 'atualizando custos...'
+        for i in xrange(len(packet.paths)):
+            # ignora custo do vizinho a ele mesmo
+            if i == packet.source:
+                continue
 
-    def printdt0(self):
-        for i in xrange(0, len(self.nodes)):
-            print 'distancia do node 0 ate o node ', i, ' eh de ', self.nodes[i]
+            combined_cost = self.paths[packet.source].cost + packet.paths[i].cost
+            
+            # se o nó ainda não foi descoberto
+            if self.paths[i].cost == -1 or combined_cost < self.paths[i].cost:
+                flag_update = True
+                self.paths[i].cost = combined_cost
+                self.paths[i].antecessor = packet.source
 
-    def send_routine_packet(self, dest):
-        pacote = Packet(self.id, self.table)
+        if flag_update:
+            print 'enviando novos custos para os vizinhos...'
+            for i in self.neighbours:
+                p = Packet(self.id, i, self.paths)
+                self.tolayer2(p)
+            printdt()
 
-# def receiver_thread():
-#     while True:
+
+    def printdt(self):
+        for i in xrange(len(self.paths)):
+            print 'distancia do node ', self.id ,' ate o node ', i, ' eh de ', self.paths[i].cost
 
 
-    # Main
+
+def receiver_thread():
+    while True:
+        # cria socket
+        serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # liga a uma porta
+        serverSocket.bind('localhost', 3000 + node.id)
+        # tamanho da fila
+        serverSocket.listen(5)
+
+        while True:
+            (clientSocket, address) = serverSocket.accept()
+
+            try:
+                data = clientSocket.recv(1024)
+                pkt = pickle.loads(data)
+                processo.rtupdate(pkt)
+            except Exception as e:
+                print 'Erro no recebimento:', e            
+
+# Main
 def main():
+    global node
+    node = Node()
+
     # receiver_thread
-    node = Node0(0)
-    node.rinit0()
-    node.printdt0()
+    thread.start_new_thread(receiver_thread, ())
+
+    node.rinit()
+    node.printdt()
 
 if __name__ == "__main__":
     sys.exit(main())
