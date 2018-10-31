@@ -27,6 +27,7 @@ class Node:
         self.paths.append(RIPTableElement(3, self.id))
         self.paths.append(RIPTableElement(7, self.id))
 
+    def send_package(self):
         print 'enviando custos para os vizinhos...'
         for i in self.neighbours:
             p = Packet(self.id, i, self.paths)
@@ -57,18 +58,24 @@ class Node:
                 self.paths[i].antecessor = packet.source
 
         if flag_update:
-            print 'enviando novos custos para os vizinhos...'
-            for i in self.neighbours:
-                p = Packet(self.id, i, self.paths)
-                self.tolayer2(p)
+            self.send_package()
             self.printdt()
 
 
     def printdt(self):
-        for i in xrange(len(self.paths)):
-            print 'distancia do node ', self.id ,' ate o node ', i, ' eh de ', self.paths[i].cost
+        for i in range(0,4):
+            print 'distancia do node ', self.id ,' ate o node ', i, ' eh de ', self.paths[i].cost, 'com antecessor ', self.paths[i].antecessor
 
+def init_thread():
+    global node
 
+    while True:
+        try:
+            node.rinit()
+            raw_input()
+            node.send_package()
+        except Exception as e:
+            print '[THREAD] Erro ao iniciar nos\n', e
 
 def receiver_thread():
     while True:
@@ -82,7 +89,7 @@ def receiver_thread():
 
         while True:
             time.sleep(5)
-            node.rinit()
+
             (clientSocket, address) = serverSocket.accept()
 
             try:
@@ -99,6 +106,7 @@ def main():
 
     # receiver_thread
     thread.start_new_thread(receiver_thread, ())
+    thread.start_new_thread(init_thread, ())
 
     signal.pause()
 
