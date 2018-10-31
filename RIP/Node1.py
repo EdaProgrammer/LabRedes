@@ -22,14 +22,15 @@ class Node:
 
     # guardar antecessor
     def rinit(self):
+        print 'rtinit iniciado'
         self.paths.append(RIPTableElement(1, self.id))
         self.paths.append(RIPTableElement(0, self.id))
         self.paths.append(RIPTableElement(1, self.id))
         self.paths.append(RIPTableElement(999, self.id))
 
     def send_package(self):
-        print 'enviando custos para os vizinhos...'
         for i in self.neighbours:
+            print 'enviando custos para o vizinho: ', i
             p = Packet(self.id, i, self.paths)
             self.tolayer2(p)
 
@@ -43,7 +44,7 @@ class Node:
     def rtupdate(self, packet):
         flag_update = False
 
-        print 'atualizando custos...'
+        print 'rtupdate acionado. Remetente do pacote: ', packet.source
         for i in xrange(len(packet.paths)):
             # ignora custo do vizinho a ele mesmo
             if i == packet.source:
@@ -52,30 +53,39 @@ class Node:
             combined_cost = self.paths[packet.source].cost + packet.paths[i].cost
 
             # se o no ainda nao foi descoberto
-            if self.paths[i].cost == -1 or combined_cost < self.paths[i].cost:
+            if combined_cost < self.paths[i].cost:
                 flag_update = True
                 self.paths[i].cost = combined_cost
-                self.paths[i].antecessor = packet.source
+
+                # Se o caminho ao no rementente eh direto (antecessor = eu mesmo)
+                if self.paths[packet.source].antecessor == self.id:
+                    # antecessor do novo custo eh o remetente
+                    self.paths[i].antecessor = packet.source
+                else:
+                    # antecessor do novo custo eh o antecessor do remetente ((0) -1-> *(1)* -1-> (2) -2-> (3) = 4)
+                    self.paths[i].antecessor = self.paths[packet.source].antecessor
 
         if flag_update:
-            self.send_package()
+            print 'Tabela atualizada!'
             self.printdt()
+            self.send_package()
 
 
     def printdt(self):
+        print 'No\t|Dist\t|Ant'
         for i in range(0,4):
-            print 'distancia do node ', self.id ,' ate o node ', i, ' eh de ', self.paths[i].cost, 'com antecessor ', self.paths[i].antecessor
+            print i ,'\t|', self.paths[i].cost, '\t|', self.paths[i].antecessor
 
 def init_thread():
     global node
 
-    while True:
-        try:
-            node.rinit()
-            raw_input()
-            node.send_package()
-        except Exception as e:
-            print '[THREAD] Erro ao iniciar nos\n', e
+
+    try:
+        node.rinit()
+        raw_input()
+        node.send_package()
+    except Exception as e:
+        print '[THREAD] Erro ao iniciar nos\n', e
 
 def receiver_thread():
     while True:
@@ -87,7 +97,6 @@ def receiver_thread():
         serverSocket.listen(5)
 
         while True:
-            time.sleep(5)
 
             (clientSocket, address) = serverSocket.accept()
 
