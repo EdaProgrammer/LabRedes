@@ -1,8 +1,10 @@
 # ----------- R I P -------------- #
 
 # Gustavo da Silva Eda          620114
-# Renan Rossignatti de França   489697
+# Renan Rossignatti de Franca   489697
 
+from RIPTableElement import RIPTableElement
+from Packet import Packet
 from random import *
 import socket
 import thread
@@ -10,13 +12,11 @@ import pickle
 import sys
 import signal
 import time
-import Packet
-import RIPTableElement
 
 class Node:
 
     def __init__(self):
-        self.id = 0
+        self.id = 2
         self.neighbours = [0, 1, 3]
         self.paths = [] # RIPTableElements
 
@@ -35,7 +35,8 @@ class Node:
     def tolayer2(self, packet):
         # abre socket
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect(localhost, 3000 + packet.dest)
+        server_address = ('localhost', 3000 + packet.dest)
+        s.connect(server_address)
         s.send(pickle.dumps(packet))
 
     def rtupdate(self, packet):
@@ -48,8 +49,8 @@ class Node:
                 continue
 
             combined_cost = self.paths[packet.source].cost + packet.paths[i].cost
-            
-            # se o nó ainda não foi descoberto
+
+            # se o no ainda nao foi descoberto
             if self.paths[i].cost == -1 or combined_cost < self.paths[i].cost:
                 flag_update = True
                 self.paths[i].cost = combined_cost
@@ -60,7 +61,7 @@ class Node:
             for i in self.neighbours:
                 p = Packet(self.id, i, self.paths)
                 self.tolayer2(p)
-            printdt()
+            self.printdt()
 
 
     def printdt(self):
@@ -74,19 +75,21 @@ def receiver_thread():
         # cria socket
         serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # liga a uma porta
-        serverSocket.bind('localhost', 3000 + node.id)
+        serverSocket.bind(('', 3000 + node.id))
         # tamanho da fila
         serverSocket.listen(5)
 
         while True:
+            time.sleep(5)
+            node.rinit()
             (clientSocket, address) = serverSocket.accept()
 
             try:
                 data = clientSocket.recv(1024)
                 pkt = pickle.loads(data)
-                processo.rtupdate(pkt)
+                node.rtupdate(pkt)
             except Exception as e:
-                print 'Erro no recebimento:', e            
+                print 'Erro no recebimento:', e
 
 # Main
 def main():
@@ -96,8 +99,7 @@ def main():
     # receiver_thread
     thread.start_new_thread(receiver_thread, ())
 
-    node.rinit()
-    node.printdt()
+    signal.pause()
 
 if __name__ == "__main__":
     sys.exit(main())
